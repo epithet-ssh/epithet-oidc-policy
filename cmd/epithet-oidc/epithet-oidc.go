@@ -42,7 +42,6 @@ func run(cc *cobra.Command, args []string) error {
 		IssuerURL:     "https://dev-585900.okta.com/oauth2/default",
 		RedirectURL:   "http://127.0.0.1:5555/callback",
 		ListenAddress: "127.0.0.1:5555",
-		Done:          make(chan error),
 		Timeout:       60 * time.Second,
 	}
 	payload, err := authenticator.Authenticate(ctx)

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -23,10 +24,10 @@ type Authenticator struct {
 	IssuerURL     string
 	RedirectURL   string
 	ListenAddress string
-	Done          chan error
 	Timeout       time.Duration
 
 	payload string
+	done    chan error
 }
 
 // Payload holds tokens after authentication
@@ -37,16 +38,18 @@ type Payload struct {
 
 func (a *Authenticator) succeeded(w http.ResponseWriter) {
 	fmt.Fprintf(w, "authenticated")
-	a.Done <- nil
+	a.done <- nil
 }
 
 func (a *Authenticator) failed(w http.ResponseWriter, err error) {
 	fmt.Fprintf(w, err.Error())
-	a.Done <- err
+	a.done <- err
 }
 
 // Authenticate with IDP
 func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err error) {
+	a.done = make(chan error)
+
 	provider, err := oidc.NewProvider(ctx, a.IssuerURL)
 	if err != nil {
 		return
@@ -78,7 +81,12 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 	codeChallengeMethodParam := oauth2.SetAuthURLParam("code_challenge_method", "S256")
 	codeVerifierParam := oauth2.SetAuthURLParam("code_verifier", codeVerifier)
 
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	u, err := url.Parse(a.RedirectURL)
+	if err != nil {
+		return
+	}
+
+	http.HandleFunc(u.Path, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("state") != state {
 			a.failed(w, errors.New("state did not match"))
 			return
@@ -119,12 +127,12 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 	}
 
 	go func() {
-		a.Done <- http.Serve(listener, nil)
+		a.done <- http.Serve(listener, nil)
 	}()
 
 	go func() {
 		if err := browser.OpenURL(config.AuthCodeURL(state, codeChallengeParam, codeChallengeMethodParam)); err != nil {
-			a.Done <- err
+			a.done <- err
 		}
 	}()
 
@@ -134,7 +142,7 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 		case <-timer.C:
 			err = fmt.Errorf("Timed out after %.fs", a.Timeout.Seconds())
 			return
-		case err = <-a.Done:
+		case err = <-a.done:
 			payload = a.payload
 			return
 		}
