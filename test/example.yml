@@ -1,0 +1,6 @@
+---
+client_id: 0oa1owuye8JlLeWG1357
+issuer_url: https://dev-585900.okta.com/oauth2/default
+redirect_url: http://127.0.0.1:5555/callback
+listen_address: 127.0.0.1:5555
+timeout: 60

@@ -8,7 +8,7 @@ internal/agent/agent.pb.go:
 .PHONY: protoc
 protoc: internal/agent/agent.pb.go
 
-epithet-oidc: internal/agent/agent.pb.go
+epithet-oidc: internal/agent/agent.pb.go cmd/epithet-oidc/*
 	go build ./cmd/epithet-oidc
 
 .PHONY: build
