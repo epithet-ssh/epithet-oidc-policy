@@ -14,6 +14,13 @@ epithet-oidc: internal/agent/agent.pb.go cmd/epithet-oidc/*
 .PHONY: build
 build: epithet-oidc protoc
 
+.PHONY: test
+test: test-support	## build and run test plumbing
+	go test ./...
+
+.PHONY: test-support
+test-support: protoc
+
 .PHONY: clean
 clean:			## clean all local resources
 	rm -f epithet-*
