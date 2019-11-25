@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	rpc "github.com/micbase/epithet-oidc-plugin/internal/agent"
-	"github.com/micbase/epithet-oidc-plugin/pkg/oidc"
+	rpc "github.com/epithet-ssh/epithet-oidc-plugin/internal/agent"
+	"github.com/epithet-ssh/epithet-oidc-plugin/pkg/oidc"
 	"github.com/spf13/cobra"
 )
 
