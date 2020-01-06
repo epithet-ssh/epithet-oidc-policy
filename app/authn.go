@@ -38,7 +38,7 @@ func (a *Authenticator) GetJWKS() (err error) {
 	return
 }
 
-func (a *Authenticator) Authenticate(token string) (user string, identities []string, err error) {
+func (a *Authenticator) Authenticate(token string) (user string, err error) {
 	tok, err := jwt.ParseSigned(token)
 	if err != nil {
 		return
@@ -46,8 +46,7 @@ func (a *Authenticator) Authenticate(token string) (user string, identities []st
 
 	claims := jwt.Claims{}
 	addition := struct {
-		User   string   `json:"user"`
-		Groups []string `json:"groups"`
+		User string `json:"user"`
 	}{}
 	err = tok.Claims(a.Jwks, &claims, &addition)
 	if err != nil {
@@ -69,7 +68,6 @@ func (a *Authenticator) Authenticate(token string) (user string, identities []st
 		return
 	}
 
-	identities = addition.Groups
 	user = addition.User
 	return
 }
