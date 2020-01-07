@@ -1,20 +1,26 @@
 .PHONY: all
 all: test build		## run tests and build binaries
 
-epithet-oidc-policy: app/*
-	mkdir -p build
-	go build -o build/epithet-oidc-policy ./app
+epithet-oidc-policy:
+	go build -o epithet-oidc-policy ./cmd
 
 .PHONY: build
 build: epithet-oidc-policy
 
 .PHONY: test
-test:			## build and run test plumbing
-	go test ./app/
+test:	## build and run test plumbing
+	go test ./...
 
 .PHONY: clean
 clean:			## clean all local resources
-	rm -rf build
+	go clean ./...
+	go clean -testcache
+	rm -f epithet-*
+
+.PHONY: clean-all
+clean-all: clean
+	go clean -cache
+	go clean -modcache
 
 .PHONY: help
 help:			## Show this help.

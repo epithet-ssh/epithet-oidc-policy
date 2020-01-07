@@ -1,4 +1,4 @@
-package main
+package authenticator
 
 import (
 	"encoding/json"
@@ -17,8 +17,34 @@ type Authenticator struct {
 	Jwks     *jose.JSONWebKeySet
 }
 
+// New creates a new Authenticator
+func New(jwksURL, issuer string, audience []string, options ...Option) (*Authenticator, error) {
+	authenticator := &Authenticator{
+		JwksURL:  jwksURL,
+		Issuer:   issuer,
+		Audience: audience,
+	}
+
+	for _, o := range options {
+		o.apply(authenticator)
+	}
+
+	err := authenticator.GetJWKS()
+	return authenticator, err
+}
+
+// Option configures the agent
+type Option interface {
+	apply(*Authenticator)
+}
+
+type optionFunc func(*Authenticator)
+
+func (f optionFunc) apply(a *Authenticator) {
+	f(a)
+}
+
 func (a *Authenticator) GetJWKS() (err error) {
-	// TODO Have a better cache MESH-354
 	resp, err := http.Get(a.JwksURL)
 	if err != nil {
 		return
