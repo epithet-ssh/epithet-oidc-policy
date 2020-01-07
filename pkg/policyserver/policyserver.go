@@ -19,7 +19,7 @@ type policyServer struct {
 }
 
 type policyRequest struct {
-	token string `json:"token"`
+	Token string `json:"token"`
 }
 
 // New creates a new Policy Server which needs to then
@@ -66,6 +66,7 @@ func (s *policyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	r.Body.Close()
 
@@ -73,9 +74,10 @@ func (s *policyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(buf, &pr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	user, err := s.authenticator.Authenticate(pr.token)
+	user, err := s.authenticator.Authenticate(pr.Token)
 	if err != nil {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
@@ -105,7 +107,9 @@ func (s *policyServer) getCertParams(w http.ResponseWriter, r *http.Request) {
 	bytes, err := json.Marshal(certParams)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(bytes)
