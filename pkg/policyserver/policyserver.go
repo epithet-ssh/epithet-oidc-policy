@@ -2,8 +2,8 @@ package policyserver
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authenticator"
@@ -16,6 +16,10 @@ type policyServer struct {
 	authenticator *authenticator.Authenticator
 	authorizer    *authorizer.Authorizer
 	httpClient    *http.Client
+}
+
+type policyRequest struct {
+	token string `json:"token"`
 }
 
 // New creates a new Policy Server which needs to then
@@ -59,9 +63,19 @@ func WithHTTPClient(httpClient *http.Client) Option {
 }
 
 func (s *policyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	r.Body.Close()
 
-	user, err := s.authenticator.Authenticate(token)
+	pr := policyRequest{}
+	err = json.Unmarshal(buf, &pr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	user, err := s.authenticator.Authenticate(pr.token)
 	if err != nil {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
