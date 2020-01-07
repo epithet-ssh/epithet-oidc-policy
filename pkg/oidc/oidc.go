@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -35,12 +34,6 @@ type Authenticator struct {
 	codeChallengeParam       oauth2.AuthCodeOption
 	codeChallengeMethodParam oauth2.AuthCodeOption
 	codeVerifierParam        oauth2.AuthCodeOption
-}
-
-// Payload holds tokens after authentication
-type Payload struct {
-	IDToken     string
-	AccessToken string
 }
 
 func (a *Authenticator) succeeded(w http.ResponseWriter) {
@@ -75,15 +68,7 @@ func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	payload := Payload{
-		IDToken:     rawIDToken,
-		AccessToken: oauth2Token.AccessToken,
-	}
-	payloadString, err := json.Marshal(payload)
-	if err != nil {
-		a.failed(w, err)
-	}
-	a.payload = string(payloadString)
+	a.payload = rawIDToken
 	a.succeeded(w)
 	return
 }
