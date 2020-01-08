@@ -72,7 +72,7 @@ func (a *Authenticator) Authenticate(token string) (user string, err error) {
 
 	claims := jwt.Claims{}
 	addition := struct {
-		User string `json:"user"`
+		User string `json:"preferred_username"`
 	}{}
 	err = tok.Claims(a.Jwks, &claims, &addition)
 	if err != nil {
