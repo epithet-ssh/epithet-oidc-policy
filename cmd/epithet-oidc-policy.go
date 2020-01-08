@@ -50,7 +50,7 @@ func run(cc *cobra.Command, args []string) error {
 		return err
 	}
 
-	authorizer, err := authorizer.New()
+	authorizer, err := authorizer.New(cfg.AuthorizerCommand)
 	if err != nil {
 		return err
 	}

@@ -3,3 +3,4 @@ jwks_url: https://dev-585900.okta.com/oauth2/default/v1/keys
 issuer:  https://dev-585900.okta.com/oauth2/default
 audience:
 - 0oa1owuye8JlLeWG1357
+authorizer_command: ./test/test %u 120

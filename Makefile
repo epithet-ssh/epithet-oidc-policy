@@ -1,7 +1,10 @@
+CMD_GO=$(shell find cmd -type f -name '*.go')
+PKG_GO=$(shell find pkg -type f -name '*.go')
+
 .PHONY: all
 all: test build		## run tests and build binaries
 
-epithet-oidc-policy:
+epithet-oidc-policy: $(CMD_GO) $(PKG_GO)
 	go build -o epithet-oidc-policy ./cmd
 
 .PHONY: build
