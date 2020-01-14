@@ -11,14 +11,14 @@ internal/agent/agent.pb.go:
 .PHONY: protoc
 protoc: internal/agent/agent.pb.go
 
-epithet-oidc: internal/agent/agent.pb.go cmd/epithet-oidc/*
-	go build ./cmd/epithet-oidc
+epithet-oidc-plugin: internal/agent/agent.pb.go cmd/epithet-oidc-plugin/*
+	go build -o epithet-oidc-plugin ./cmd/epithet-oidc-plugin
 
 epithet-oidc-policy: $(CMD_GO) $(PKG_GO)
-	go build -o epithet-oidc-policy ./cmd
+	go build -o epithet-oidc-policy ./cmd/epithet-oidc-policy
 
 .PHONY: build
-build: epithet-oidc-policy epithet-oidc protoc
+build: epithet-oidc-policy epithet-oidc-plugin protoc
 
 .PHONY: clean-all
 clean-all: clean

@@ -16,7 +16,7 @@ var configPath string
 
 // AgentCommand is an agent command
 var cmd = &cobra.Command{
-	Use:   "epithet-oidc",
+	Use:   "epithet-oidc-plugin",
 	Short: "Authentication plugin using OpenID Connect",
 	RunE:  run,
 }

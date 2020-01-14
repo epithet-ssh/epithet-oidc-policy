@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authenticator"
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authorizer"
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/policyserver"
+	"github.com/epithet-ssh/epithet-oidc/pkg/authenticator"
+	"github.com/epithet-ssh/epithet-oidc/pkg/authorizer"
+	"github.com/epithet-ssh/epithet-oidc/pkg/policyserver"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	log "github.com/sirupsen/logrus"

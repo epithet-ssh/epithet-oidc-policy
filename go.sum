@@ -22,10 +22,8 @@ github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5Xh
 github.com/docker/go-units v0.3.3/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
-github.com/epithet-ssh/epithet v0.0.0-20191113210721-3e100e16b8fc/go.mod h1:y2gzvMPjfDdF9Z1NpwTKiysdgqP/UWIi6FjGEIpPJM4=
 github.com/epithet-ssh/epithet v0.0.0-20191121005704-e844cfa7b5d7 h1:WaWPjJYLBxTpXeuZj89QiqDTF87fvVrEvJfoQ/hdpDM=
 github.com/epithet-ssh/epithet v0.0.0-20191121005704-e844cfa7b5d7/go.mod h1:y2gzvMPjfDdF9Z1NpwTKiysdgqP/UWIi6FjGEIpPJM4=
-github.com/epithet-ssh/epithet-oidc-policy v0.0.0-20200108225459-03f996036bf7/go.mod h1:OX0kNkum64sLXfQ2v+fugbz9mu/XOdIA6+ySo6vcjfs=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/go-chi/chi v4.0.2+incompatible h1:maB6vn6FqCxrpz4FqWdh4+lwpyZIQS7YEAUcHlgXVRs=
 github.com/go-chi/chi v4.0.2+incompatible/go.mod h1:eB3wogJHnLi3x/kFX2A+IbTBlXxmMeXJVKy9tTv1XzQ=
