@@ -1,24 +1,21 @@
-CMD_GO=$(shell find cmd -type f -name '*.go')
-PKG_GO=$(shell find pkg -type f -name '*.go')
-
 .PHONY: all
-all: test build		## run tests and build binaries
+all: test build
 
-internal/agent/agent.pb.go:
+internal/agent/agent.pb.go: proto/agent.proto
 	mkdir -p internal/agent
 	protoc -I ./proto agent.proto --go_out=plugins=grpc:internal/agent
 
 .PHONY: protoc
 protoc: internal/agent/agent.pb.go
 
-epithet-oidc-plugin: internal/agent/agent.pb.go cmd/epithet-oidc-plugin/*
+epithet-oidc-plugin: cmd/epithet-oidc-plugin/* pkg/oidc/* internal/agent/*
 	go build -o epithet-oidc-plugin ./cmd/epithet-oidc-plugin
 
-epithet-oidc-policy: $(CMD_GO) $(PKG_GO)
+epithet-oidc-policy: cmd/epithet-oidc-policy/* pkg/authenticator/* pkg/authorizer/* pkg/policyserver/*
 	go build -o epithet-oidc-policy ./cmd/epithet-oidc-policy
 
 .PHONY: build
-build: epithet-oidc-policy epithet-oidc-plugin protoc
+build: epithet-oidc-policy epithet-oidc-plugin
 
 .PHONY: clean-all
 clean-all: clean
@@ -26,18 +23,14 @@ clean-all: clean
 	go clean -modcache
 
 .PHONY: test
-test: test-support	## build and run test plumbing
+test: test-support
 	go test ./...
 
 .PHONY: test-support
 test-support: protoc
 
 .PHONY: clean
-clean:			## clean all local resources
+clean:
 	go clean ./...
 	go clean -testcache
 	rm -f epithet-*
-
-.PHONY: help
-help:			## Show this help.
-	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
