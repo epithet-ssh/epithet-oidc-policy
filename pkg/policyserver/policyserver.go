@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authenticator"
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authorizer"
+	"github.com/epithet-ssh/epithet-oidc/pkg/authenticator"
+	"github.com/epithet-ssh/epithet-oidc/pkg/authorizer"
 	"github.com/epithet-ssh/epithet/pkg/ca"
 	"github.com/gorilla/context"
 )

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/epithet-ssh/epithet-oidc-policy/pkg/authorizer"
+	"github.com/epithet-ssh/epithet-oidc/pkg/authorizer"
 )
 
 func main() {
