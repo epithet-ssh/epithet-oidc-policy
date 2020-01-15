@@ -1,11 +1,10 @@
 .PHONY: all
 all: test build
 
-.PHONY: generate
-generate:
+internal/agent/agent.pb.go:
 	go generate ./...
 
-epithet-oidc-plugin: generate cmd/epithet-oidc-plugin/* pkg/oidc/* internal/agent/*
+epithet-oidc-plugin: internal/agent/agent.pb.go cmd/epithet-oidc-plugin/* pkg/oidc/* internal/agent/*
 	go build -o epithet-oidc-plugin ./cmd/epithet-oidc-plugin
 
 epithet-oidc-policy: cmd/epithet-oidc-policy/* pkg/authenticator/* pkg/authorizer/* pkg/policyserver/*
