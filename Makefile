@@ -19,7 +19,7 @@ clean-all: clean
 	go clean -modcache
 
 .PHONY: test
-test: generate
+test: internal/agent/agent.pb.go
 	go test ./...
 
 
