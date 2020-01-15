@@ -1,0 +1,55 @@
+before:
+  hooks:
+    - go mod tidy    
+    - go generate ./...
+builds:
+  - id: epithet-oidc-plugin
+    binary: epithet-oidc-plugin
+    main: ./cmd/epithet-oidc-plugin/
+ 
+archives:
+- replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+brews:
+  -
+    name: epithet-oidc
+    # GOARM to specify which 32-bit arm version to use if there are multiple versions
+    # from the build section. Brew formulas support atm only one 32-bit version.
+    # Default is 6 for all artifacts or each id if there a multiple versions.
+    goarm: 6
+    github:
+      owner: epithet-ssh
+      name: homebrew-epithet
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: goreleaserbot
+      email: brianm@groupon.com
+    folder: Formula
+
+    # Caveats for the user of your binary.
+    # Default is empty.
+    caveats: "some instructions"
+
+    # Your app's homepage.
+    # Default is empty.
+    homepage: "https://epithet.io/"
+
+    # So you can `brew test` your formula.
+    # Default is empty.
+    test: |
+      system "#{bin}/epithet-oidc-plugin --version"      

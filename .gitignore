@@ -1,2 +1,4 @@
-epithet-oidc-*
+/dist
+.envrc
+/epithet-oidc-*
 test/test
