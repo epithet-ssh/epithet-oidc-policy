@@ -10,12 +10,25 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"text/template"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
+
+type templateData struct {
+	Username string
+	Name     string
+	Error    string
+}
+
+// Claims - OIDC claims definition
+type Claims struct {
+	Username string `json:"preferred_username"`
+	Name     string `json:"name"`
+}
 
 // Authenticator performs OpenID Connect
 type Authenticator struct {
@@ -25,8 +38,9 @@ type Authenticator struct {
 	ListenAddress string
 	Timeout       time.Duration
 
-	payload string
-	done    chan error
+	template *template.Template
+	payload  string
+	done     chan error
 
 	tokenVerifier            *oidc.IDTokenVerifier
 	state                    string
@@ -36,13 +50,20 @@ type Authenticator struct {
 	codeVerifierParam        oauth2.AuthCodeOption
 }
 
-func (a *Authenticator) succeeded(w http.ResponseWriter) {
-	fmt.Fprintf(w, "authenticated")
+func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
+	data := templateData{
+		Username: claims.Username,
+		Name:     claims.Name,
+	}
+	a.template.Execute(w, data)
 	a.done <- nil
 }
 
 func (a *Authenticator) failed(w http.ResponseWriter, err error) {
-	fmt.Fprintf(w, err.Error())
+	data := templateData{
+		Error: err.Error(),
+	}
+	a.template.Execute(w, data)
 	a.done <- err
 }
 
@@ -62,14 +83,20 @@ func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) 
 		a.failed(w, errors.New("No id_token field in oauth2 token"))
 		return
 	}
-	_, err = a.tokenVerifier.Verify(r.Context(), rawIDToken)
+	idToken, err := a.tokenVerifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
 		a.failed(w, err)
 		return
 	}
 
+	var claims Claims
+	if err = idToken.Claims(&claims); err != nil {
+		a.failed(w, fmt.Errorf("Failed to get claims from token: %s", err))
+		return
+	}
+
 	a.payload = rawIDToken
-	a.succeeded(w)
+	a.succeeded(w, claims)
 	return
 }
 
@@ -91,6 +118,11 @@ func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
 
 // Authenticate with IDP
 func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err error) {
+	a.template, err = template.New("response").Parse(responseTpl)
+	if err != nil {
+		return "", fmt.Errorf("Failed to parse template: %q", err)
+	}
+
 	a.done = make(chan error)
 
 	provider, err := oidc.NewProvider(ctx, a.IssuerURL)
