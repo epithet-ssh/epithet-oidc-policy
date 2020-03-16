@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"os"
 	"time"
 
@@ -40,6 +41,11 @@ func run(cc *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load config %s: %w", configPath, err)
 	}
 
+	template, err := template.New("response").Parse(responseTpl)
+	if err != nil {
+		panic(err)
+	}
+
 	ctx := context.Background()
 
 	client, err := rpc.NewClient(sock)
@@ -52,6 +58,7 @@ func run(cc *cobra.Command, args []string) error {
 		RedirectURL:   oidcConfig.RedirectURL,
 		ListenAddress: oidcConfig.ListenAddress,
 		Timeout:       time.Duration(oidcConfig.Timeout) * time.Second,
+		Template:      template,
 	}
 	payload, err := authenticator.Authenticate(ctx)
 	if err != nil {

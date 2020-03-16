@@ -1,4 +1,4 @@
-package oidc
+package main
 
 const responseTpl = `
 {{ $title := "Authentication Succeeded" }}

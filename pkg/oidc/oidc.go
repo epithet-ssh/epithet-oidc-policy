@@ -7,10 +7,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
-	"text/template"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -37,10 +37,10 @@ type Authenticator struct {
 	RedirectURL   string
 	ListenAddress string
 	Timeout       time.Duration
+	Template      *template.Template
 
-	template *template.Template
-	payload  string
-	done     chan error
+	payload string
+	done    chan error
 
 	tokenVerifier            *oidc.IDTokenVerifier
 	state                    string
@@ -55,7 +55,7 @@ func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
 		Username: claims.Username,
 		Name:     claims.Name,
 	}
-	a.template.Execute(w, data)
+	a.Template.Execute(w, data)
 	a.done <- nil
 }
 
@@ -63,7 +63,7 @@ func (a *Authenticator) failed(w http.ResponseWriter, err error) {
 	data := templateData{
 		Error: err.Error(),
 	}
-	a.template.Execute(w, data)
+	a.Template.Execute(w, data)
 	a.done <- err
 }
 
@@ -118,11 +118,6 @@ func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
 
 // Authenticate with IDP
 func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err error) {
-	a.template, err = template.New("response").Parse(responseTpl)
-	if err != nil {
-		return "", fmt.Errorf("Failed to parse template: %q", err)
-	}
-
 	a.done = make(chan error)
 
 	provider, err := oidc.NewProvider(ctx, a.IssuerURL)
