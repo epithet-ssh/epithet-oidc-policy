@@ -1,9 +1,9 @@
 package main
 
 const responseTpl = `
-{{ $title := "Authentication Succeeded" }}
+{{ $title := "SSH Authentication Succeeded" }}
 {{ if .Error }}
-	{{ $title = "Authentication Failed" }}
+	{{ $title = "SSH Authentication Failed" }}
 {{ end }}
 <!DOCTYPE html>
 <html>
