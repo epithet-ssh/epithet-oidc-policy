@@ -31,6 +31,12 @@ type Claims struct {
 	Name     string `json:"name"`
 }
 
+// AuthenticationResponse holds the response after a successful authentication
+type AuthenticationResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // Authenticator performs OpenID Connect
 type Authenticator struct {
 	ClientID      string
@@ -40,9 +46,8 @@ type Authenticator struct {
 	Timeout       time.Duration
 	Template      *template.Template
 
-	token        string
-	refreshToken string
-	done         chan error
+	response *AuthenticationResponse
+	done     chan error
 
 	tokenVerifier            *oidc.IDTokenVerifier
 	state                    string
@@ -53,7 +58,7 @@ type Authenticator struct {
 }
 
 func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
-	log.Info("succeeded to authenticate")
+	log.Debug("succeeded to authenticate")
 	data := templateData{
 		Username: claims.Username,
 		Name:     claims.Name,
@@ -72,7 +77,7 @@ func (a *Authenticator) failed(w http.ResponseWriter, err error) {
 }
 
 func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info("handling callback")
+	log.Debug("handling callback")
 	if r.URL.Query().Get("state") != a.state {
 		a.failed(w, errors.New("state did not match"))
 		return
@@ -95,21 +100,21 @@ func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	a.token = oauth2Token.AccessToken
-	a.refreshToken = oauth2Token.RefreshToken
+	a.response.AccessToken = oauth2Token.AccessToken
+	a.response.RefreshToken = oauth2Token.RefreshToken
 	a.succeeded(w, claims)
 	return
 }
 
 func (a *Authenticator) generateState(len int) string {
-	log.Info("generating random state")
+	log.Debug("generating random state")
 	randomBytes := make([]byte, len)
 	rand.Read(randomBytes)
 	return base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
 }
 
 func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
-	log.Info("generating code verifier")
+	log.Debug("generating code verifier")
 	randomBytes := make([]byte, len)
 	rand.Read(randomBytes)
 	codeVerifier := base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
@@ -120,7 +125,7 @@ func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
 }
 
 func (a *Authenticator) renewToken(ctx context.Context, refreshToken string) (string, error) {
-	log.Info("renewing token by refresh token")
+	log.Debug("renewing token by refresh token")
 	oauthToken := &oauth2.Token{
 		RefreshToken: refreshToken,
 	}
@@ -154,12 +159,13 @@ func (a *Authenticator) verifyToken(ctx context.Context, oauth2Token *oauth2.Tok
 }
 
 // Authenticate with IDP
-func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (string, string, error) {
+func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (*AuthenticationResponse, error) {
 	a.done = make(chan error)
+	a.response = &AuthenticationResponse{}
 
 	provider, err := oidc.NewProvider(ctx, a.IssuerURL)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	oidcConfig := &oidc.Config{
 		ClientID: a.ClientID,
@@ -179,7 +185,9 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 		if err != nil {
 			log.WithError(err).Warn("failed to renew token by refresh token")
 		} else {
-			return token, refreshToken, err
+			a.response.AccessToken = token
+			a.response.RefreshToken = refreshToken
+			return a.response, err
 		}
 	}
 
@@ -193,14 +201,14 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 
 	u, err := url.Parse(a.RedirectURL)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	http.HandleFunc(u.Path, a.callbackHandler)
 
 	listener, err := net.Listen("tcp", a.ListenAddress)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	go func() {
@@ -219,9 +227,9 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 	for {
 		select {
 		case <-timer.C:
-			return "", "", fmt.Errorf("Timed out after %.fs", a.Timeout.Seconds())
+			return nil, fmt.Errorf("Timed out after %.fs", a.Timeout.Seconds())
 		case err = <-a.done:
-			return a.token, a.refreshToken, err
+			return a.response, err
 		}
 	}
 }

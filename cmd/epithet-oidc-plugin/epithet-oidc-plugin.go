@@ -100,16 +100,16 @@ func run(cc *cobra.Command, args []string) error {
 		Timeout:       time.Duration(oidcConfig.Timeout) * time.Second,
 		Template:      template,
 	}
-	token, refreshToken, err := authenticator.Authenticate(ctx, refreshToken)
+	response, err := authenticator.Authenticate(ctx, refreshToken)
 	if err != nil {
 		return err
 	}
 
 	// Pass refresh token to the agent by stdout
-	fmt.Fprintf(os.Stdout, refreshToken)
+	fmt.Fprintf(os.Stdout, response.RefreshToken)
 
 	_, err = client.Authenticate(ctx, &rpc.AuthnRequest{
-		Token: token,
+		Token: response.AccessToken,
 	})
 	return err
 }
