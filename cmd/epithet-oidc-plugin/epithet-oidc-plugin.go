@@ -85,7 +85,7 @@ func run(cc *cobra.Command, args []string) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.WithError(err).Warn("failed to read from stdin")
+		log.WithError(err).Error("failed to read from stdin")
 	}
 
 	client, err := rpc.NewClient(sock)

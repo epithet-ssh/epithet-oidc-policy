@@ -58,7 +58,7 @@ type Authenticator struct {
 }
 
 func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
-	log.Debug("succeeded to authenticate")
+	log.Info("succeeded to authenticate")
 	data := templateData{
 		Username: claims.Username,
 		Name:     claims.Name,
@@ -68,7 +68,7 @@ func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
 }
 
 func (a *Authenticator) failed(w http.ResponseWriter, err error) {
-	log.WithError(err).Error("failed to authenticate")
+	log.WithError(err).Info("failed to authenticate")
 	data := templateData{
 		Error: err.Error(),
 	}
@@ -183,7 +183,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 	if refreshToken != "" {
 		token, err := a.renewToken(ctx, refreshToken)
 		if err != nil {
-			log.WithError(err).Warn("failed to renew token by refresh token")
+			log.WithError(err).Info("failed to renew token by refresh token")
 		} else {
 			a.response.AccessToken = token
 			a.response.RefreshToken = refreshToken
