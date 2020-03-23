@@ -15,6 +15,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/pkg/browser"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
@@ -39,8 +40,9 @@ type Authenticator struct {
 	Timeout       time.Duration
 	Template      *template.Template
 
-	payload string
-	done    chan error
+	token        string
+	refreshToken string
+	done         chan error
 
 	tokenVerifier            *oidc.IDTokenVerifier
 	state                    string
@@ -51,6 +53,7 @@ type Authenticator struct {
 }
 
 func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
+	log.Info("succeeded to authenticate")
 	data := templateData{
 		Username: claims.Username,
 		Name:     claims.Name,
@@ -60,6 +63,7 @@ func (a *Authenticator) succeeded(w http.ResponseWriter, claims Claims) {
 }
 
 func (a *Authenticator) failed(w http.ResponseWriter, err error) {
+	log.WithError(err).Error("failed to authenticate")
 	data := templateData{
 		Error: err.Error(),
 	}
@@ -68,6 +72,7 @@ func (a *Authenticator) failed(w http.ResponseWriter, err error) {
 }
 
 func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("handling callback")
 	if r.URL.Query().Get("state") != a.state {
 		a.failed(w, errors.New("state did not match"))
 		return
@@ -78,12 +83,7 @@ func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) 
 		a.failed(w, err)
 		return
 	}
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		a.failed(w, errors.New("No id_token field in oauth2 token"))
-		return
-	}
-	idToken, err := a.tokenVerifier.Verify(r.Context(), rawIDToken)
+	idToken, err := a.verifyToken(r.Context(), oauth2Token)
 	if err != nil {
 		a.failed(w, err)
 		return
@@ -95,18 +95,21 @@ func (a *Authenticator) callbackHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	a.payload = rawIDToken
+	a.token = oauth2Token.AccessToken
+	a.refreshToken = oauth2Token.RefreshToken
 	a.succeeded(w, claims)
 	return
 }
 
 func (a *Authenticator) generateState(len int) string {
+	log.Info("generating random state")
 	randomBytes := make([]byte, len)
 	rand.Read(randomBytes)
 	return base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
 }
 
 func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
+	log.Info("generating code verifier")
 	randomBytes := make([]byte, len)
 	rand.Read(randomBytes)
 	codeVerifier := base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
@@ -116,13 +119,47 @@ func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
 	return codeVerifier, codeChallenge
 }
 
+func (a *Authenticator) renewToken(ctx context.Context, refreshToken string) (string, error) {
+	log.Info("renewing token by refresh token")
+	oauthToken := &oauth2.Token{
+		RefreshToken: refreshToken,
+	}
+	tokenSource := a.oauthConfig.TokenSource(ctx, oauthToken)
+	newToken, err := tokenSource.Token()
+	if err != nil {
+		return "", err
+	}
+
+	_, err = a.verifyToken(ctx, newToken)
+	if err != nil {
+		return "", err
+	}
+	return newToken.AccessToken, nil
+}
+
+func (a *Authenticator) verifyToken(ctx context.Context, oauth2Token *oauth2.Token) (*oidc.IDToken, error) {
+	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	if !ok {
+		return nil, errors.New("No id_token field in oauth2 token")
+	}
+	idToken, err := a.tokenVerifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		return nil, err
+	}
+	err = idToken.VerifyAccessToken(oauth2Token.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+	return idToken, nil
+}
+
 // Authenticate with IDP
-func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err error) {
+func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (string, string, error) {
 	a.done = make(chan error)
 
 	provider, err := oidc.NewProvider(ctx, a.IssuerURL)
 	if err != nil {
-		return
+		return "", "", err
 	}
 	oidcConfig := &oidc.Config{
 		ClientID: a.ClientID,
@@ -133,9 +170,20 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 		ClientID:    a.ClientID,
 		Endpoint:    provider.Endpoint(),
 		RedirectURL: a.RedirectURL,
-		Scopes:      []string{oidc.ScopeOpenID, "profile"},
+		Scopes:      []string{oidc.ScopeOpenID, oidc.ScopeOfflineAccess, "profile"},
 	}
 
+	// Attempt to renew token by refresh token
+	if refreshToken != "" {
+		token, err := a.renewToken(ctx, refreshToken)
+		if err != nil {
+			log.WithError(err).Warn("failed to renew token by refresh token")
+		} else {
+			return token, refreshToken, err
+		}
+	}
+
+	log.Info("starting authorization code flow")
 	a.state = a.generateState(64)
 	codeVerifier, codeChallenge := a.generateCodeVerifier(128)
 
@@ -145,21 +193,23 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 
 	u, err := url.Parse(a.RedirectURL)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
 	http.HandleFunc(u.Path, a.callbackHandler)
 
 	listener, err := net.Listen("tcp", a.ListenAddress)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
 	go func() {
+		log.Infof("listening on %s to receive callback", a.ListenAddress)
 		a.done <- http.Serve(listener, nil)
 	}()
 
 	go func() {
+		log.Info("opening browser to authenticate")
 		if err := browser.OpenURL(a.oauthConfig.AuthCodeURL(a.state, a.codeChallengeParam, a.codeChallengeMethodParam)); err != nil {
 			a.done <- err
 		}
@@ -169,11 +219,9 @@ func (a *Authenticator) Authenticate(ctx context.Context) (payload string, err e
 	for {
 		select {
 		case <-timer.C:
-			err = fmt.Errorf("Timed out after %.fs", a.Timeout.Seconds())
-			return
+			return "", "", fmt.Errorf("Timed out after %.fs", a.Timeout.Seconds())
 		case err = <-a.done:
-			payload = a.payload
-			return
+			return a.token, a.refreshToken, err
 		}
 	}
 }
