@@ -47,9 +47,7 @@ func logging(cmd *cobra.Command, args []string) {
 	if logPath != "" {
 		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			// Disable file logging when there is an error
-			log.SetOutput(ioutil.Discard)
-			return
+			panic(err)
 		}
 		log.SetOutput(f)
 		switch verbosity {
