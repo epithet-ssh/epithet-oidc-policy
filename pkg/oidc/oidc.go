@@ -51,6 +51,7 @@ type Authenticator struct {
 
 	tokenVerifier            *oidc.IDTokenVerifier
 	state                    string
+	nonce                    string
 	oauthConfig              oauth2.Config
 	codeChallengeParam       oauth2.AuthCodeOption
 	codeChallengeMethodParam oauth2.AuthCodeOption
@@ -113,6 +114,13 @@ func (a *Authenticator) generateState(len int) string {
 	return base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
 }
 
+func (a *Authenticator) generateNonce(len int) string {
+	log.Debug("generating random nonce")
+	randomBytes := make([]byte, len)
+	rand.Read(randomBytes)
+	return base64.RawURLEncoding.EncodeToString(randomBytes)[:len]
+}
+
 func (a *Authenticator) generateCodeVerifier(len int) (string, string) {
 	log.Debug("generating code verifier")
 	randomBytes := make([]byte, len)
@@ -150,6 +158,9 @@ func (a *Authenticator) verifyToken(ctx context.Context, oauth2Token *oauth2.Tok
 	idToken, err := a.tokenVerifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		return nil, err
+	}
+	if idToken.Nonce != a.nonce {
+		return nil, errors.New("invalid nonce in id_token")
 	}
 	err = idToken.VerifyAccessToken(oauth2Token.AccessToken)
 	if err != nil {
@@ -193,6 +204,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 
 	log.Info("starting authorization code flow")
 	a.state = a.generateState(64)
+	a.nonce = a.generateNonce(64)
 	codeVerifier, codeChallenge := a.generateCodeVerifier(128)
 
 	a.codeChallengeParam = oauth2.SetAuthURLParam("code_challenge", codeChallenge)
@@ -218,7 +230,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, refreshToken string) (
 
 	go func() {
 		log.Info("opening browser to authenticate")
-		if err := browser.OpenURL(a.oauthConfig.AuthCodeURL(a.state, a.codeChallengeParam, a.codeChallengeMethodParam)); err != nil {
+		if err := browser.OpenURL(a.oauthConfig.AuthCodeURL(a.state, a.codeChallengeParam, a.codeChallengeMethodParam, oidc.Nonce(a.nonce))); err != nil {
 			a.done <- err
 		}
 	}()
