@@ -2,6 +2,7 @@ package authenticator
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -13,16 +14,18 @@ import (
 type Authenticator struct {
 	JwksURL  string
 	Issuer   string
-	Audience []string
-	Jwks     *jose.JSONWebKeySet
+	Audience string
+	ClientID string
+	jwks     *jose.JSONWebKeySet
 }
 
 // New creates a new Authenticator
-func New(jwksURL, issuer string, audience []string, options ...Option) (*Authenticator, error) {
+func New(jwksURL, issuer, audience, clientID string, options ...Option) (*Authenticator, error) {
 	authenticator := &Authenticator{
 		JwksURL:  jwksURL,
 		Issuer:   issuer,
 		Audience: audience,
+		ClientID: clientID,
 	}
 
 	for _, o := range options {
@@ -60,40 +63,35 @@ func (a *Authenticator) GetJWKS() (err error) {
 	if err != nil {
 		return
 	}
-	a.Jwks = &jwks
+	a.jwks = &jwks
 	return
 }
 
-func (a *Authenticator) Authenticate(token string) (user string, err error) {
+func (a *Authenticator) Authenticate(token string) (string, error) {
 	tok, err := jwt.ParseSigned(token)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	claims := jwt.Claims{}
 	addition := struct {
-		User string `json:"preferred_username"`
+		ClientID string `json:"cid"`
 	}{}
-	err = tok.Claims(a.Jwks, &claims, &addition)
+	err = tok.Claims(a.jwks, &claims, &addition)
 	if err != nil {
-		return
+		return "", err
 	}
-
-	for _, aud := range a.Audience {
-		err = claims.Validate(jwt.Expected{
-			Issuer:   a.Issuer,
-			Audience: []string{aud},
-			Time:     time.Now(),
-		})
-
-		if err == nil {
-			break
-		}
-	}
+	err = claims.Validate(jwt.Expected{
+		Issuer:   a.Issuer,
+		Audience: []string{a.Audience},
+		Time:     time.Now(),
+	})
 	if err != nil {
-		return
+		return "", err
+	}
+	if addition.ClientID != a.ClientID {
+		return "", errors.New("invalid client id")
 	}
 
-	user = addition.User
-	return
+	return claims.Subject, nil
 }

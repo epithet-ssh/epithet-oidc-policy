@@ -45,7 +45,7 @@ func run(cc *cobra.Command, args []string) error {
 		return err
 	}
 
-	authenticator, err := authenticator.New(cfg.JwksURL, cfg.Issuer, cfg.Audience)
+	authenticator, err := authenticator.New(cfg.JwksURL, cfg.Issuer, cfg.Audience, cfg.ClientID)
 	if err != nil {
 		return err
 	}

@@ -47,10 +47,11 @@ func parse(un unmarshal, body []byte) (*config, error) {
 }
 
 type config struct {
-	JwksURL           string   `json:"jwks_url" yaml:"jwks_url" toml:"jwks_url"`
-	Issuer            string   `json:"issuer" yaml:"issuer" toml:"issuer"`
-	Audience          []string `json:"audience" yaml:"audience" toml:"audience"`
-	AuthorizerCommand string   `json:"authorizer_command" yaml:"authorizer_command" toml:"authorizer_command"`
+	JwksURL           string `json:"jwks_url" yaml:"jwks_url" toml:"jwks_url"`
+	Issuer            string `json:"issuer" yaml:"issuer" toml:"issuer"`
+	Audience          string `json:"audience" yaml:"audience" toml:"audience"`
+	ClientID          string `json:"client_id" yaml:"client_id" toml:"client_id"`
+	AuthorizerCommand string `json:"authorizer_command" yaml:"authorizer_command" toml:"authorizer_command"`
 }
 
 func (c *config) init() error {
