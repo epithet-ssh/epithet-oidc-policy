@@ -37,4 +37,4 @@ brews:
     caveats: "Installs the binaries, but no configs"    
     homepage: "https://epithet.io/"
     test: |
-      system "#{bin}/epithet-agent --version"      
+      system "#{bin}/epithet-oidc-plugin --version"
